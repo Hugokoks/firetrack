@@ -56,3 +56,13 @@ func (s *Service) Login(email, password string) (*LoginResult, error) {
 		Session: session,
 	}, nil
 }
+
+func (s *Service) Logout(sessionID string) error {
+
+	if sessionID == "" {
+
+		return nil
+	}
+
+	return s.repo.DeleteSessionById(sessionID)
+}

@@ -9,6 +9,9 @@ import (
 
 const SessionCookieName = "session_id"
 
+// production true
+var secureCookieBool = false
+
 type Handler struct {
 	service *Service
 }
@@ -48,7 +51,7 @@ func (h *Handler) Login(c *gin.Context) {
 		}
 	}
 
-	secureCookie := false // na Railway/HTTPS pak dej true
+	secureCookie := secureCookieBool
 
 	c.SetCookie(
 		SessionCookieName,
@@ -96,4 +99,36 @@ func (h *Handler) Me(c *gin.Context) {
 			"role":  user.Role,
 		},
 	})
+}
+
+func (h *Handler) Logout(c *gin.Context) {
+
+	sessionID, err := c.Cookie(SessionCookieName)
+
+	if err == nil && sessionID != "" {
+		if err := h.service.Logout(sessionID); err != nil {
+
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to logout",
+			})
+			return
+		}
+	}
+
+	secureCookie := secureCookieBool //production true
+
+	c.SetCookie(
+		SessionCookieName,
+		"",
+		-1,
+		"/",
+		"",
+		secureCookie,
+		true,
+	)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "logout successful",
+	})
+
 }

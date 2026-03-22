@@ -66,7 +66,6 @@ func (r *Repository) CreateSession(userID string, expiresAt time.Time) (*Session
 	return session, nil
 }
 
-
 func (r *Repository) GetUserBySessionID(sessionID string) (*User, error) {
 	query := `
 		SELECT 
@@ -104,4 +103,15 @@ func (r *Repository) GetUserBySessionID(sessionID string) (*User, error) {
 	}
 
 	return &user, nil
+}
+
+func (r *Repository) DeleteSessionById(sessionID string) error {
+
+	query := `
+		DELETE FROM sessions WHERE id::text = $1
+	`
+
+	_, err := r.db.Exec(query, sessionID)
+
+	return err
 }
