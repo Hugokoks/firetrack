@@ -10,6 +10,7 @@ import (
 type Config struct {
 	Port        string
 	DatabaseURL string
+	FilesRoot   string
 }
 
 func Load() *Config {
@@ -21,6 +22,7 @@ func Load() *Config {
 	return &Config{
 		Port:        getEnv("PORT", "8080"),
 		DatabaseURL: getEnv("DATABASE_URL", ""),
+		FilesRoot:   getEnv("FILES_ROOT", "./uploads"),
 	}
 }
 

@@ -1,8 +1,12 @@
 package jobs
 
+import "errors"
+
 type Service struct {
 	repo *Repository
 }
+
+var ErrJobNotFound = errors.New("job not found")
 
 func NewService(repo *Repository) *Service {
 	return &Service{repo: repo}
@@ -26,4 +30,18 @@ func (s *Service) GetAll() ([]Job, error) {
 
 func (s *Service) GetByID(id string) (*Job, error) {
 	return s.repo.GetByID(id)
+}
+
+func (s *Service) Update(id string, input UpdateJobInput) (*Job, error) {
+	job, err := s.repo.GetByID(id)
+	if err != nil {
+		return nil, err
+	}
+	if job == nil {
+		return nil, ErrJobNotFound
+	}
+
+	applyJobUpdates(job, input)
+
+	return s.repo.Update(job)
 }

@@ -12,7 +12,7 @@ type Repository struct {
 	db *sql.DB
 }
 
-func NewRepositry(db *sql.DB) *Repository {
+func NewRepository(db *sql.DB) *Repository {
 
 	return &Repository{db: db}
 
@@ -128,4 +128,36 @@ func (r *Repository) GetByJobID(jobID string) ([]Note, error) {
 	}
 
 	return notes, nil
+}
+
+func (r *Repository) UpdateByID(noteID, content string) (*Note, error) {
+	query := `
+		UPDATE job_notes
+		SET content = $1
+		WHERE id::text = $2
+		RETURNING
+			id::text,
+			job_id::text,
+			author_id::text,
+			content,
+			created_at
+	`
+
+	var note Note
+
+	err := r.db.QueryRow(query, content, noteID).Scan(
+		&note.ID,
+		&note.JobID,
+		&note.AuthorID,
+		&note.Content,
+		&note.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return &note, nil
 }

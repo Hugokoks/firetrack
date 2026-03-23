@@ -11,7 +11,6 @@ import (
 func main() {
 	// load config
 	cfg := config.Load()
-
 	// connect DB
 	database, err := db.NewPostgres(cfg.DatabaseURL)
 
@@ -20,8 +19,8 @@ func main() {
 	}
 	defer database.Close()
 
-	// create router
-	r := server.NewRouter(database)
+	app := server.NewApp(database, cfg)
+	r := server.NewRouter(app)
 
 	log.Println("🚀 Server running on", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

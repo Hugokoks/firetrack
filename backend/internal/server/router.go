@@ -1,62 +1,43 @@
 package server
 
-import (
-	"database/sql"
-	"firetrack/internal/auth"
-	"firetrack/internal/jobs"
-	"firetrack/internal/notes"
-	"net/http"
+import "github.com/gin-gonic/gin"
 
-	"github.com/gin-gonic/gin"
-)
-
-func NewRouter(db *sql.DB) *gin.Engine {
+func NewRouter(app *App) *gin.Engine {
 	r := gin.New()
 
-	// middleware
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
-	// health check
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status": "ok",
-		})
+		c.JSON(200, gin.H{"status": "ok"})
 	})
 
-	authRepo := auth.NewRepository(db)
-	authService := auth.NewService(authRepo)
-	authHandler := auth.NewHandler(authService)
-
-	jobsRepo := jobs.NewRepository(db)
-	jobsService := jobs.NewService(jobsRepo)
-	jobsHandler := jobs.NewHandler(jobsService)
-
-	notesRepo := notes.NewRepositry(db)
-	notesService := notes.NewService(notesRepo)
-	notesHandler := notes.NewHandler(notesService)
-	// API group
 	api := r.Group("/api")
+
+	// AUTH
+	auth := api.Group("/auth")
 	{
-		authGroup := api.Group("/auth")
-		{
-			authGroup.POST("/login", authHandler.Login)
-			authGroup.GET("/me", auth.AuthMiddleware(authRepo), authHandler.Me)
-			authGroup.POST("/logout", auth.AuthMiddleware(authRepo), authHandler.Logout)
-		}
-		jobsGroup := api.Group("/jobs")
-		{
-			jobsGroup.POST("", auth.AuthMiddleware(authRepo), jobsHandler.Create)
-			jobsGroup.GET("", auth.AuthMiddleware(authRepo), jobsHandler.GetAll)
-			jobsGroup.GET("/:id", auth.AuthMiddleware(authRepo), jobsHandler.GetByID)
+		auth.POST("/login", app.AuthHandler.Login)
+		auth.GET("/me", app.AuthMiddleware, app.AuthHandler.Me)
+		auth.POST("/logout", app.AuthMiddleware, app.AuthHandler.Logout)
+	}
 
-			jobsGroup.POST("/:id/notes", auth.AuthMiddleware(authRepo), notesHandler.Create)
-			jobsGroup.GET("/:id/notes", auth.AuthMiddleware(authRepo), notesHandler.GetByJobID)
-			jobsGroup.DELETE("/:id/notes/:noteId",
-				auth.AuthMiddleware(authRepo),
-				notes.RequireNoteOwnerOrAdmin(notesRepo), notesHandler.Delete)
+	// JOBS
+	jobs := api.Group("/jobs")
+	jobs.Use(app.AuthMiddleware, app.ActivityMiddleware)
+	{
+		jobs.POST("", app.JobsHandler.Create)
+		jobs.GET("", app.JobsHandler.GetAll)
+		jobs.GET("/:id", app.JobsHandler.GetByID)
+		jobs.PATCH("/:id", app.JobsHandler.Update)
 
-		}
+		jobs.POST("/:id/notes", app.NotesHandler.Create)
+		jobs.GET("/:id/notes", app.NotesHandler.GetByJobID)
+		jobs.DELETE("/:id/notes/:noteId",
+			app.NoteOwnerCheck,
+			app.NotesHandler.Delete,
+		)
+		jobs.PATCH("/:id/notes/:noteId", app.NoteOwnerCheck, app.NotesHandler.Update)
 	}
 
 	return r

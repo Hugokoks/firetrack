@@ -1,5 +1,5 @@
 package notes
 
-type CreateNoteInput struct {
+type NoteInput struct {
 	Content string `json:"content" binding:"required"`
 }
