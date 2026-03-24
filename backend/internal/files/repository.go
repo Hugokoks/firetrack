@@ -52,3 +52,56 @@ func (r *Repository) Create(file *File) (*File, error) {
 
 	return file, nil
 }
+
+func (r *Repository) GetByJobID(jobID string) ([]File, error) {
+	query := `
+		SELECT
+			id,
+			job_id,
+			uploaded_by,
+			file_name,
+			stored_name,
+			file_path,
+			mime_type,
+			file_size,
+			created_at
+		FROM job_files
+		WHERE job_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.Query(query, jobID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var files []File
+
+	for rows.Next() {
+		var file File
+
+		err := rows.Scan(
+			&file.ID,
+			&file.JobID,
+			&file.UploadedBy,
+			&file.FileName,
+			&file.StoredName,
+			&file.FilePath,
+			&file.MimeType,
+			&file.FileSize,
+			&file.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		files = append(files, file)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return files, nil
+}

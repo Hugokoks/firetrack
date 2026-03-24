@@ -97,3 +97,15 @@ func (s *Service) Create(input CreateFileInput) (*File, error) {
 
 	return created, nil
 }
+
+func (s *Service) GetByJobID(jobID string) ([]File, error) {
+	job, err := s.jobsRepo.GetByID(jobID)
+	if err != nil {
+		return nil, err
+	}
+	if job == nil {
+		return nil, ErrJobNotFound
+	}
+
+	return s.repo.GetByJobID(jobID)
+}

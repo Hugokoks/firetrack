@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"firetrack/internal/activity"
-	"firetrack/internal/auth"
+	"firetrack/internal/httputil"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,27 +18,13 @@ func NewHandler(service *Service) *Handler {
 }
 
 func (h *Handler) Create(c *gin.Context) {
-	jobID := c.Param("id")
-	if jobID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "missing job id",
-		})
-		return
-	}
-
-	rawUser, exists := c.Get(auth.ContextUserKey)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "unauthorized",
-		})
-		return
-	}
-
-	user, ok := rawUser.(*auth.User)
+	jobID, ok := httputil.RequireParam(c, "id", "missing job id")
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "invalid auth context",
-		})
+		return
+	}
+
+	user, ok := httputil.GetCurrentUser(c)
+	if !ok {
 		return
 	}
 
@@ -94,4 +80,36 @@ func (h *Handler) Create(c *gin.Context) {
 		"message": "file uploaded successfully",
 		"file":    file,
 	})
+}
+
+func (h *Handler) GetByJobID(c *gin.Context) {
+
+	jobID, ok := httputil.RequireParam(c, "id", "missing job id")
+	if !ok {
+
+		return
+	}
+
+	files, err := h.service.GetByJobID(jobID)
+
+	if err != nil {
+		switch err {
+		case ErrJobNotFound:
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "job not found",
+			})
+			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to fetch files",
+			})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+
+		"files": files,
+	})
+
 }

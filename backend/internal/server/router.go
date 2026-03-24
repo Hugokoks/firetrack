@@ -38,6 +38,9 @@ func NewRouter(app *App) *gin.Engine {
 			app.NotesHandler.Delete,
 		)
 		jobs.PATCH("/:id/notes/:noteId", app.NoteOwnerCheck, app.NotesHandler.Update)
+
+		jobs.POST("/:id/files", app.FilesHandler.Create)
+		jobs.GET("/:id/files", app.FilesHandler.GetByJobID)
 	}
 
 	return r

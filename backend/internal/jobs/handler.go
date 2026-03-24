@@ -5,6 +5,7 @@ import (
 
 	"firetrack/internal/activity"
 	"firetrack/internal/auth"
+	"firetrack/internal/httputil"
 
 	"github.com/gin-gonic/gin"
 )
@@ -26,19 +27,8 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	rawUser, exists := c.Get(auth.ContextUserKey)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "unauthorized",
-		})
-		return
-	}
-
-	user, ok := rawUser.(*auth.User)
+	user, ok := httputil.GetCurrentUser(c)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "invalid auth context",
-		})
 		return
 	}
 
