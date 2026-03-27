@@ -26,7 +26,9 @@ func (s *Storage) EnsureDirFor(relPath string) error {
 	dir := filepath.Dir(s.BuildAbsolutePath(relPath))
 	return os.MkdirAll(dir, 0755)
 }
-
+func (s *Storage) Open(relPath string) (*os.File, error) {
+	return os.Open(s.BuildAbsolutePath(relPath))
+}
 func (s *Storage) Save(relPath string, src io.Reader) (int64, error) {
 	absPath := s.BuildAbsolutePath(relPath)
 

@@ -7,4 +7,6 @@ var (
 	ErrFileTooLarge       = errors.New("file too large")
 	ErrFileTypeNotAllowed = errors.New("file type not allowed")
 	ErrJobNotFound        = errors.New("job not found")
+	ErrFileNotFound       = errors.New("file not found")
+
 )

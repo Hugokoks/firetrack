@@ -1,6 +1,8 @@
 package files
 
 import (
+	"fmt"
+	"io"
 	"net/http"
 
 	"firetrack/internal/activity"
@@ -112,4 +114,146 @@ func (h *Handler) GetByJobID(c *gin.Context) {
 		"files": files,
 	})
 
+}
+
+func (h *Handler) View(c *gin.Context) {
+	
+	jobID, ok := httputil.RequireParam(c, "id", "missing job id")
+	if !ok {
+
+		return
+	}
+
+	fileID, ok := httputil.RequireParam(c, "fileId", "missing job id")
+	if !ok {
+
+		return
+	}
+
+	file, reader, err := h.service.View(jobID, fileID)
+	
+	if err != nil {
+		switch err {
+		case ErrJobNotFound:
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "job not found",
+			})
+			return
+		case ErrFileNotFound:
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "file not found",
+			})
+			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to open file",
+			})
+			return
+		}
+	}
+	defer reader.Close()
+
+	c.Header("Content-Type", file.MimeType)
+	c.Header("Content-Disposition", `inline; filename="`+file.FileName+`"`)
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Header("Content-Length", fmt.Sprintf("%d", file.FileSize))
+
+	if _, err := io.Copy(c.Writer, reader); err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+}
+
+
+func (h *Handler) Download(c *gin.Context) {
+
+	jobID, ok := httputil.RequireParam(c, "id", "missing job id")
+	if !ok {
+		return
+	}
+	fileID, ok := httputil.RequireParam(c, "fileId", "missing job id")
+	if !ok {
+		return
+	}
+
+	file, reader, err := h.service.Download(jobID, fileID)
+	if err != nil {
+		switch err {
+		case ErrJobNotFound:
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "job not found",
+			})
+			return
+		case ErrFileNotFound:
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "file not found",
+			})
+			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to download file",
+			})
+			return
+		}
+	}
+	defer reader.Close()
+
+	c.Header("Content-Type", file.MimeType)
+	c.Header("Content-Disposition", `attachment; filename="`+file.FileName+`"`)
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Header("Content-Length", fmt.Sprintf("%d", file.FileSize))
+
+	if _, err := io.Copy(c.Writer, reader); err != nil {
+		c.Status(http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *Handler) Delete(c *gin.Context) {
+	jobID, ok := httputil.RequireParam(c, "id", "missing job id")
+	if !ok {
+		return
+	}
+	fileID, ok := httputil.RequireParam(c, "fileId", "missing file id")
+	if !ok {
+		return
+	}
+	user, ok := httputil.GetCurrentUser(c)
+	if !ok {
+		return
+	}
+	file, err := h.service.Delete(jobID, fileID)
+	if err != nil {
+		switch err {
+		case ErrJobNotFound:
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "job not found",
+			})
+			return
+		case ErrFileNotFound:
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": "file not found",
+			})
+			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "failed to delete file",
+			})
+			return
+		}
+	}
+	activity.Set(c, activity.Payload{
+		JobID:       jobID,
+		UserID:      user.ID,
+		ActionType:  "file_deleted",
+		ActionLabel: "File deleted",
+		Meta: gin.H{
+			"file_id":   file.ID,
+			"file_name": file.FileName,
+		},
+	})
+	
+	c.JSON(http.StatusOK, gin.H{
+		"message": "file deleted successfully",
+	})
 }

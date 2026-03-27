@@ -25,12 +25,14 @@ func NewRouter(app *App) *gin.Engine {
 	// JOBS
 	jobs := api.Group("/jobs")
 	jobs.Use(app.AuthMiddleware, app.ActivityMiddleware)
-	{
+	{	
+		// JOBS
 		jobs.POST("", app.JobsHandler.Create)
 		jobs.GET("", app.JobsHandler.GetAll)
 		jobs.GET("/:id", app.JobsHandler.GetByID)
 		jobs.PATCH("/:id", app.JobsHandler.Update)
 
+		// NOTES
 		jobs.POST("/:id/notes", app.NotesHandler.Create)
 		jobs.GET("/:id/notes", app.NotesHandler.GetByJobID)
 		jobs.DELETE("/:id/notes/:noteId",
@@ -39,8 +41,13 @@ func NewRouter(app *App) *gin.Engine {
 		)
 		jobs.PATCH("/:id/notes/:noteId", app.NoteOwnerCheck, app.NotesHandler.Update)
 
+		// FILES
 		jobs.POST("/:id/files", app.FilesHandler.Create)
 		jobs.GET("/:id/files", app.FilesHandler.GetByJobID)
+		jobs.GET("/:id/files/:fileId/view",app.FilesHandler.View)
+		jobs.GET("/:id/files/:fileId/download",app.FilesHandler.Download)
+		jobs.DELETE("/:id/files/:fileId", app.FilesHandler.Delete)
+		
 	}
 
 	return r

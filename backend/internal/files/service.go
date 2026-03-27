@@ -109,3 +109,56 @@ func (s *Service) GetByJobID(jobID string) ([]File, error) {
 
 	return s.repo.GetByJobID(jobID)
 }
+
+func (s *Service) View(jobID, fileID string) (*File, io.ReadCloser, error) {
+	job, err := s.jobsRepo.GetByID(jobID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if job == nil {
+		return nil, nil, ErrJobNotFound
+	}
+
+	file, err := s.repo.GetByID(fileID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if file == nil || file.JobID != jobID {
+		return nil, nil, ErrFileNotFound
+	}
+
+	reader, err := s.storage.Open(file.FilePath)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return file, reader, nil
+}
+
+func (s *Service) Delete(jobID, fileID string) (*File, error) {
+	job, err := s.jobsRepo.GetByID(jobID)
+	if err != nil {
+		return nil, err
+	}
+	if job == nil {
+		return nil, ErrJobNotFound
+	}
+
+	file, err := s.repo.GetByID(fileID)
+	if err != nil {
+		return nil, err
+	}
+	if file == nil || file.JobID != jobID {
+		return nil, ErrFileNotFound
+	}
+
+	if err := s.storage.Remove(file.FilePath); err != nil {
+		return nil, err
+	}
+
+	if err := s.repo.Delete(file.ID); err != nil {
+		return nil, err
+	}
+
+	return file, nil
+}

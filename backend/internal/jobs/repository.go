@@ -335,3 +335,8 @@ func (r *Repository) Update(job *Job) (*Job, error) {
 
 	return &updatedJob, nil
 }
+
+func (r *Repository) Delete(id string) error {
+	_, err := r.db.Exec(`DELETE FROM job_files WHERE id = $1`, id)
+	return err
+}
